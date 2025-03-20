@@ -7,7 +7,7 @@ from oip.downloader import PageDownloader, RequestsPageDownloader
 
 
 def get_urls() -> List[str]:
-    return [f'https://www.rfc-editor.org/rfc/rfc{x}.html' for x in range(1, 5)]
+    return [f'https://www.rfc-editor.org/rfc/rfc{x}.html' for x in range(1, 1001)]
 
 
 def crawl(
