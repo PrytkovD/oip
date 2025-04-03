@@ -10,9 +10,13 @@ class Repository(Generic[T], ABC):
         return NotImplemented
 
     @abstractmethod
+    def save(self, obj: T):
+        return NotImplemented
+
+    @abstractmethod
     def load_all(self) -> List[T]:
         return NotImplemented
 
     @abstractmethod
-    def save(self, obj: T) -> T:
+    def save_all(self, objs: List[T]):
         return NotImplemented
