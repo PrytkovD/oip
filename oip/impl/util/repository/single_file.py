@@ -8,6 +8,7 @@ from oip.impl.util.repository.key_extraction import KeyExtractor
 
 T = TypeVar('T')
 
+
 class SingleFileRepository(Repository[T]):
     def __init__(self,
                  file_path: str,
@@ -67,7 +68,7 @@ class SingleFileRepository(Repository[T]):
             objs_to_save[key] = obj
 
         with open(self._file_path, 'w') as file:
-            for obj in objs_to_save.values():
+            for obj in sorted(objs_to_save.values()):
                 serialized_obj = self._serializer.serialize(obj)
                 if not serialized_obj:
                     continue

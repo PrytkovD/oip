@@ -19,7 +19,7 @@ class PageTokensSerializer(Serializer[PageTokens]):
         self._token_serializer = TokenSerializer()
 
     def serialize(self, page_tokens: PageTokens) -> str:
-        return '\n'.join([self._token_serializer.serialize(token) for token in page_tokens.tokens])
+        return '\n'.join([self._token_serializer.serialize(token) for token in sorted(page_tokens.tokens)])
 
 
 class PageTokensDeserializer(Deserializer[PageTokens]):
