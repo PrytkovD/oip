@@ -32,7 +32,7 @@ class PageLemmasSerializer(Serializer[PageLemmas]):
         self._lemma_serializer = LemmaSerializer()
 
     def serialize(self, page_lemmas: PageLemmas) -> str:
-        return '\n'.join([self._lemma_serializer.serialize(lemma) for lemma in page_lemmas.lemmas])
+        return '\n'.join([self._lemma_serializer.serialize(lemma) for lemma in sorted(page_lemmas.lemmas)])
 
 
 class PageLemmasDeserializer(Deserializer[PageLemmas]):

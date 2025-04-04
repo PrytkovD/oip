@@ -58,7 +58,7 @@ def main():
 
         print(f'Crawled {crawled_urls}/{max_crawled_urls} URLs')
 
-        if crawled_urls >= 100:
+        if crawled_urls >= max_crawled_urls:
             break
 
 

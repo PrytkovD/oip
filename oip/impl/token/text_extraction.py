@@ -10,7 +10,8 @@ class BeautifulSoupTextExtractor(TextExtractor):
         for not_wanted in soup(["script", "style", "noscript", "head"]):
             not_wanted.decompose()
         text = soup.get_text(separator="\n", strip=True)
-        clean_lines = [line.strip().encode('ascii', 'ignore').decode('ascii') for line in text.splitlines() if line.strip()]
+        clean_lines = [line.strip().encode('ascii', 'ignore').decode('ascii') for line in text.splitlines() if
+                       line.strip()]
         return '\n'.join(clean_lines)
 
 
