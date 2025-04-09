@@ -1,7 +1,7 @@
-from oip.base.index.index import IndexEntry
+from oip.base.page_index.page_index import PageIndex
 from oip.base.page.page import Page
 from oip.base.util.repository import Repository
-from oip.impl.index.repository import default_index_entry_repository
+from oip.impl.page_index.page_index import default_page_index
 from oip.impl.page.serialization import PageSerializer, PageDeserializer
 from oip.impl.util.repository.file_name_transformation import NoopFileNameTransformer
 from oip.impl.util.repository.key_extraction import AttributeKeyExtractor
@@ -15,7 +15,7 @@ class PageKeyExtractor(AttributeKeyExtractor[Page]):
 
 
 class PageMultiFileRepository(MultiFileRepository[Page]):
-    def __init__(self, dir_path: str, index_entry_repository: Repository[IndexEntry]):
+    def __init__(self, dir_path: str, index: PageIndex):
         super().__init__(
             dir_path=dir_path,
             serializer=PageSerializer(),
@@ -23,18 +23,17 @@ class PageMultiFileRepository(MultiFileRepository[Page]):
             key_extractor=PageKeyExtractor(),
             file_name_transformer=NoopFileNameTransformer()
         )
-        self._index_entry_repository = index_entry_repository
+        self._index = index
 
     def save(self, page: Page):
         super().save(page)
         file_path = self.get_file_path_by_key(page.url)
-        index_entry = IndexEntry(file_path, page.url)
-        self._index_entry_repository.save(index_entry)
+        self._index.add_entry(page.url, file_path)
 
 
 DEFAULT_PAGE_REPOSITORY = PageMultiFileRepository(
     dir_path=PAGES_DIR,
-    index_entry_repository=default_index_entry_repository()
+    index=default_page_index()
 )
 
 

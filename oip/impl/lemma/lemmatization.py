@@ -17,7 +17,7 @@ class SimpleLemmatizer(Lemmatizer):
         lemmatized_tokens = dict[Token, Set[Token]]()
 
         for token in page_tokens.tokens:
-            lemma = self._token_lemmatizer.lemmatize_token(token)
+            lemma = self._token_lemmatizer.lemmatize(token)
 
             if lemmatized_tokens.get(lemma) is None:
                 lemmatized_tokens[lemma] = set[Token]()
@@ -34,12 +34,12 @@ class SimpleLemmatizer(Lemmatizer):
 
 class NltkTokenLemmatizer(TokenLemmatizer):
     def __init__(self):
-        nltk.download('averaged_perceptron_tagger_eng')
-        nltk.download('wordnet')
-        nltk.download('omw-1.4')
+        nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+        nltk.download('wordnet', quiet=True)
+        nltk.download('omw-1.4', quiet=True)
         self._wordnet_lemmatizer = WordNetLemmatizer()
 
-    def lemmatize_token(self, token: Token) -> Token:
+    def lemmatize(self, token: Token) -> Token:
         token, tag = pos_tag([token.value])[0]
         wordnet_pos = self._get_wordnet_pos(tag)
         lemma = self._wordnet_lemmatizer.lemmatize(token, wordnet_pos)

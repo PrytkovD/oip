@@ -16,8 +16,8 @@ class MinLenTokenFilter(TokenFilter):
 class NltkTokenFilter(TokenFilter):
     def __init__(self):
         super().__init__()
-        nltk.download('words')
-        nltk.download('stopwords')
+        nltk.download('words', quiet=True)
+        nltk.download('stopwords', quiet=True)
         self._allowed_words = set(words.words())
         self._stop_words = set(stopwords.words())
 

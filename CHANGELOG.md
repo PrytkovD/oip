@@ -36,3 +36,25 @@
 ### Изменено
 - `Tokenizer`, `Lemmatizer` и репозитории теперь убирают дубликаты и возвращают отсортированные списки
 
+## Задание 3 &mdash; 09.04.2025
+### Добавлено
+- Класс `PageIndex` &mdash; удобная обёртка поверх `PageIndexEntryRepository`
+- Класс `PartitionedFileRepository`, хранящий строки в нескольких файлах. Файл партиции определяется по хэшу ключа строки
+- Класс `TokenIndexEntry` для хранения строк инвертированного индекса токенов
+- Класс `TokenIndex` &mdash; удобная обёртка поверх `TokenIndexEntryRepository`
+- Класс `Query` &mdash; поисковой запрос
+- Класс `QueryToken` &mdash; токен поискового запроса
+- Класс `QueryTokenizer` для разбиения поискового запроса на токены
+- Класс `QueryNode` &mdash; узел АСД поискового запроса
+- Класс `QueryParser` для построения АСД поискового запроса по списку токенов
+- Класс `QueryPlanNode` &mdash; узел плана выполнения запроса
+- Класс `QueryPlanner` для построения плана выполнения запроса по АСД
+- Класс `QueryPlanExecutor` для выполнения поисковых запросов
+- Вспомогательные классы `QueryNodeVisitor` и `QueryPlanNodeVisitor` для работы с АСД и деревом плана запроса
+- Класс `SimplifyingQueryNodeVisitor` для упрощения поискового запроса по правилам двоичной логики
+- REPL-консоль
+### Изменено
+- Класс `IndexEntry` переименован в `PageIndexEntry`
+  - Сопутствующие классы также получили префикс `PageIndexEntry`
+- Ключ `PageIndexEntry` сменен с `page_file_path` на `page_url`
+- `PageRepository` теперь использует `PageIndex` вместо `PageIndexEntryRepository` напрямую

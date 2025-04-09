@@ -12,5 +12,5 @@ class Lemmatizer(ABC):
 
 class TokenLemmatizer(ABC):
     @abstractmethod
-    def lemmatize_token(self, token: Token) -> Token:
+    def lemmatize(self, token: Token) -> Token:
         return NotImplemented

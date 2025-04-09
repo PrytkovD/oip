@@ -1,7 +1,7 @@
 from typing import Optional, List, TypeVar
 
-from oip.base.util import Repository
-from oip.impl.util.repository import KeyExtractor
+from oip.base.util.repository import Repository
+from oip.impl.util.repository.key_extraction import KeyExtractor
 
 T = TypeVar('T')
 

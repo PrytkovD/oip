@@ -4,6 +4,7 @@ import requests
 
 from oip.base.page.downloading import PageDownloader
 from oip.base.page.page import Page
+from oip.impl.util.util import clean
 
 
 class RequestsPageDownloader(PageDownloader):
@@ -11,7 +12,7 @@ class RequestsPageDownloader(PageDownloader):
         try:
             response = requests.get(url)
             response.raise_for_status()
-            return Page(url=url, content=response.text)
+            return Page(url=url, content=clean(response.text))
         except Exception as e:
             return None
 
