@@ -7,7 +7,7 @@ OUT_DIR = "out"
 PAGES_DIR = os.path.join(OUT_DIR, "pages")
 TOKENS_DIR = os.path.join(OUT_DIR, "tokens")
 LEMMAS_DIR = os.path.join(OUT_DIR, "lemmas")
-PAGE_INDEX_FILE = os.path.join(OUT_DIR, "page_index.txt")
+PAGE_INDEX_FILE = os.path.join(OUT_DIR, "index.txt")
 TOKEN_INDEX_FILE = os.path.join(OUT_DIR, "token_index.txt")
 
 
