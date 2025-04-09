@@ -1,8 +1,8 @@
-from oip.base.page_index.page_index import PageIndex
 from oip.base.page.page import Page
+from oip.base.page_index.page_index import PageIndex
 from oip.base.util.repository import Repository
-from oip.impl.page_index.page_index import default_page_index
 from oip.impl.page.serialization import PageSerializer, PageDeserializer
+from oip.impl.page_index.page_index import default_page_index
 from oip.impl.util.repository.file_name_transformation import NoopFileNameTransformer
 from oip.impl.util.repository.key_extraction import AttributeKeyExtractor
 from oip.impl.util.repository.multi_file import MultiFileRepository

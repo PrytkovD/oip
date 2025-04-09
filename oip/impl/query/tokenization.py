@@ -1,8 +1,8 @@
 from typing import List
 
 from oip.base.query.query import Query
-from oip.base.query.tokenization import QueryTokenizer
 from oip.base.query.token import QueryToken
+from oip.base.query.tokenization import QueryTokenizer
 
 
 class SimpleQueryTokenizer(QueryTokenizer):

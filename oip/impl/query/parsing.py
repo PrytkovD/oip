@@ -1,8 +1,7 @@
-from abc import abstractmethod
 from typing import List, Optional
 
-from oip.base.query.parsing import QueryParser
 from oip.base.query.node import QueryNode, WordQueryNode, AndQueryNode, OrQueryNode, NotQueryNode
+from oip.base.query.parsing import QueryParser
 from oip.base.query.token import QueryToken
 
 
