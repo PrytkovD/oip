@@ -2,6 +2,7 @@ import random
 
 from oip.base.query.node import QueryNodeVisitor, WordQueryNode, QueryNode, AndQueryNode, OrQueryNode, NotQueryNode, \
     EmptyQueryNode
+from oip.base.query.simplification import QuerySimplifier
 from oip.impl.util.util import progress
 
 
@@ -590,3 +591,19 @@ class SimplifyingQueryNodeVisitor(SimplificationRule):
         for rule in self._reordering_rules:
             node = node.accept(rule)
         return node
+
+
+class SimpleQuerySimplifier(QuerySimplifier):
+    def __init__(self):
+        self._simplifying_visitor = SimplifyingQueryNodeVisitor()
+
+    def simplify_query(self, query_node: QueryNode) -> QueryNode:
+        simplified = query_node.accept(self._simplifying_visitor)
+        return simplified
+
+
+DEFAULT_QUERY_SIMPLIFIER = SimpleQuerySimplifier()
+
+
+def default_query_simplifier():
+    return DEFAULT_QUERY_SIMPLIFIER

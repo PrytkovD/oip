@@ -10,7 +10,7 @@ from oip.impl.query.parsing import default_query_parser
 from oip.impl.query.planning import default_query_planner
 from oip.impl.query.pretty_printing_ast import pretty_print_query_node_visitor
 from oip.impl.query.pretty_printing_plan import pretty_print_query_plan_node_visitor
-from oip.impl.query.simplification import SimplifyingQueryNodeVisitor
+from oip.impl.query.simplification import default_query_simplifier
 from oip.impl.query.tokenization import default_query_tokenizer
 from oip.impl.token.repository import default_page_tokens_repository
 from oip.impl.token.tokenization import default_tokenizer
@@ -77,6 +77,7 @@ def build_token_index():
 def repl():
     tokenizer = default_query_tokenizer()
     parser = default_query_parser()
+    simplifier = default_query_simplifier()
     planner = default_query_planner()
     executor = default_query_executor()
 
@@ -147,7 +148,7 @@ def repl():
             print(ast.accept(ast_pretty_print_visitor))
             continue
 
-        ast = ast.accept(SimplifyingQueryNodeVisitor())
+        ast = simplifier.simplify_query(ast)
 
         if pretty_print_simple_ast:
             print(ast.accept(ast_pretty_print_visitor))

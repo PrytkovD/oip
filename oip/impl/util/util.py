@@ -1,6 +1,6 @@
 import hashlib
-import os
 import os.path
+import shutil
 from urllib import parse
 
 OUT_DIR = "out"
@@ -55,7 +55,7 @@ def stable_hash(obj: str) -> int:
 
 def progress(iterable, description='', max_value=None):
     max_width = 80
-    terminal_width = os.get_terminal_size().columns
+    terminal_width = shutil.get_terminal_size(fallback=(80, 24)).columns
 
     width = min(terminal_width, max_width)
 
