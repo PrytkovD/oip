@@ -20,3 +20,7 @@ class Repository(Generic[T], ABC):
     @abstractmethod
     def save_all(self, objs: List[T]):
         return NotImplemented
+
+    def load_all_into(self, other: 'Repository[T]'):
+        if type(self) is not type(other):
+            other.save_all(self.load_all())

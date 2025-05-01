@@ -25,7 +25,7 @@ class SimpleTokenizer(Tokenizer):
         tokens = [Token(token) for token in text.split()]
         normalized_tokens = [self._normalizer.normalize(token) for token in tokens]
         filtered_tokens = [token for token in normalized_tokens if self._filter.is_satisfied_by(token)]
-        return PageTokens(page.url, sorted(list(set(filtered_tokens))))
+        return PageTokens(page.url, filtered_tokens)
 
 
 DEFAULT_TOKENIZER = SimpleTokenizer(
