@@ -27,8 +27,6 @@ class SimpleLemmatizer(Lemmatizer):
         for lemma, tokens in lemmatized_tokens.items():
             lemmas.append(Lemma(lemma, list(tokens)))
 
-        lemmas = sorted(list(set(lemmas)))
-
         return PageLemmas(page_tokens.page_url, lemmas)
 
 

@@ -1,13 +1,12 @@
 from typing import List
 
+from database.select import select_from
 from oip.base.lemma.lemmatization import TokenLemmatizer
 from oip.base.token.normalization import TokenNormalizer
 from oip.base.token.token import Token
 from oip.base.token_index.token_index import TokenIndex, TokenIndexEntry
 from oip.base.util.repository import Repository
-from oip.impl.lemma.lemmatization import default_token_lemmatizer
-from oip.impl.token.normalization import default_token_normalizer
-from oip.impl.token_index.repository import default_token_index_entry_repository
+from oip.impl.util.tables import PAGE_LEMMAS
 
 
 class SimpleTokenIndex(TokenIndex):
@@ -41,11 +40,20 @@ class SimpleTokenIndex(TokenIndex):
         self._repository.save(inverted_index_entry)
 
 
-DEFAULT_TOKEN_INDEX = SimpleTokenIndex(
-    repository=default_token_index_entry_repository(),
-    token_normalizer=default_token_normalizer(),
-    token_lemmatizer=default_token_lemmatizer()
-)
+class DatabaseTokenIndex(TokenIndex):
+    def get_page_urls_by_token(self, token: Token) -> List[str]:
+        records = (select_from(PAGE_LEMMAS)
+                   .columns(PAGE_LEMMAS.page_url)
+                   .where(PAGE_LEMMAS.lemma == token.value)
+                   .execute())
+
+        return list(set(record[PAGE_LEMMAS.page_url] for record in records))
+
+    def add_entry(self, token: Token, page_url: str):
+        pass
+
+
+DEFAULT_TOKEN_INDEX = DatabaseTokenIndex()
 
 
 def default_token_index() -> TokenIndex:

@@ -1,5 +1,4 @@
 import hashlib
-import os
 import os.path
 from urllib import parse
 
@@ -7,6 +6,7 @@ OUT_DIR = "out"
 PAGES_DIR = os.path.join(OUT_DIR, "pages")
 TOKENS_DIR = os.path.join(OUT_DIR, "tokens")
 LEMMAS_DIR = os.path.join(OUT_DIR, "lemmas")
+TF_IDF_DIR = os.path.join(OUT_DIR, "tf_idf")
 PAGE_INDEX_FILE = os.path.join(OUT_DIR, "index.txt")
 TOKEN_INDEX_FILE = os.path.join(OUT_DIR, "token_index.txt")
 
@@ -53,41 +53,3 @@ def stable_hash(obj: str) -> int:
     return int(md5.hexdigest(), 16)
 
 
-def progress(iterable, description='', max_value=None):
-    max_width = 80
-    terminal_width = os.get_terminal_size().columns
-
-    width = min(terminal_width, max_width)
-
-    description_width = 0
-    if description:
-        description_width = len(description) + 8 - len(description) % 8 + 1
-    progress_width = 4 + 1
-
-    progress_bar_width = width - description_width - progress_width - 2
-
-    filled_symbol = '█'
-    unfilled_symbol = ' '
-
-    if max_value is None:
-        max_value = len(iterable)
-
-    try:
-        for index, value in enumerate(iterable):
-            progress_percent = min(int((index + 1) / max_value * 100), 100)
-            filled_width = int(progress_percent * progress_bar_width / 100)
-            unfilled_width = progress_bar_width - filled_width
-            print(
-                f"{description:<{description_width}}|{filled_symbol * filled_width}{unfilled_symbol * unfilled_width}| {progress_percent}%",
-                end="\r")
-            yield value
-
-        if description:
-            print(f"{description:<{description_width}}{' ':<{width - description_width}}")
-        else:
-            print(" " * width, end="\r")
-    except GeneratorExit:
-        if description:
-            print(f"{description:<{description_width}}{' ':<{width - description_width}}")
-        else:
-            print(" " * width, end="\r")

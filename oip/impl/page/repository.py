@@ -1,12 +1,15 @@
+import uuid
+from typing import List, Optional
+
+from database.select import select_from
 from oip.base.page.page import Page
 from oip.base.page_index.page_index import PageIndex
 from oip.base.util.repository import Repository
 from oip.impl.page.serialization import PageSerializer, PageDeserializer
-from oip.impl.page_index.page_index import default_page_index
 from oip.impl.util.repository.file_name_transformation import NoopFileNameTransformer
 from oip.impl.util.repository.key_extraction import AttributeKeyExtractor
 from oip.impl.util.repository.multi_file import MultiFileRepository
-from oip.impl.util.util import PAGES_DIR
+from oip.impl.util.tables import PAGE, PAGE_CONTENT
 
 
 class PageKeyExtractor(AttributeKeyExtractor[Page]):
@@ -31,10 +34,27 @@ class PageMultiFileRepository(MultiFileRepository[Page]):
         self._index.add_entry(page.url, file_path)
 
 
-DEFAULT_PAGE_REPOSITORY = PageMultiFileRepository(
-    dir_path=PAGES_DIR,
-    index=default_page_index()
-)
+class PageDatabaseRepository(Repository[Page]):
+    def load(self, key: str) -> Optional[Page]:
+        return NotImplemented
+
+    def save(self, obj: Page):
+        id = str(uuid.uuid4())
+        PAGE.insert({PAGE.id: id, PAGE.url: obj.url})
+        PAGE_CONTENT.insert({PAGE_CONTENT.page_id: id, PAGE_CONTENT.content: obj.content})
+
+    def load_all(self) -> List[Page]:
+        records = (select_from(PAGE)
+                   .join(PAGE_CONTENT, PAGE.id, PAGE_CONTENT.page_id)
+                   .execute())
+
+        return list(set(Page(record[PAGE.url], record[PAGE_CONTENT.content]) for record in records))
+
+    def save_all(self, objs: List[Page]):
+        return NotImplemented
+
+
+DEFAULT_PAGE_REPOSITORY = PageDatabaseRepository()
 
 
 def default_page_repository() -> Repository[Page]:

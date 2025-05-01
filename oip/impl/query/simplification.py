@@ -2,7 +2,8 @@ import random
 
 from oip.base.query.node import QueryNodeVisitor, WordQueryNode, QueryNode, AndQueryNode, OrQueryNode, NotQueryNode, \
     EmptyQueryNode
-from oip.impl.util.util import progress
+from oip.base.query.simplification import QuerySimplifier
+from oip.impl.util.progress import progress
 
 
 class SimplificationRule(QueryNodeVisitor):
@@ -552,32 +553,37 @@ class SimplifyingQueryNodeVisitor(SimplificationRule):
         new_trees = [node]
 
         best_tree = node
-        for i in progress(range(tree_size)):
-            reordered_trees = []
-            for new_tree in new_trees:
-                reordered_trees.extend([self._apply_reordering_rules(new_tree) for _ in range(reordering_iterations)])
-            simplified_trees = []
-            for new_tree in set(reordered_trees):
-                simplified_tree = new_tree
-                for _ in range(simplification_iterations):
-                    tree_before_simplification = simplified_tree
-                    simplified_tree = self._apply_simplification_rules(simplified_tree)
-                    if simplified_tree == tree_before_simplification:
-                        break
-                simplified_trees.append(simplified_tree)
-            new_trees = sorted(set(simplified_trees), key=lambda x: x.accept(CountQueryNodeVisitor()))[
-                        :max_trees_in_queue]
-            best_new_tree = new_trees[0]
 
-            if best_new_tree == best_tree:
-                attempts += 1
-                if attempts == max_attempts:
-                    return best_tree
+        with progress(description='Simplifying query...', max_value=tree_size) as progress_bar:
+            for i in range(tree_size):
+                reordered_trees = []
+                for new_tree in new_trees:
+                    reordered_trees.extend(
+                        [self._apply_reordering_rules(new_tree) for _ in range(reordering_iterations)])
+                simplified_trees = []
+                for new_tree in set(reordered_trees):
+                    simplified_tree = new_tree
+                    for _ in range(simplification_iterations):
+                        tree_before_simplification = simplified_tree
+                        simplified_tree = self._apply_simplification_rules(simplified_tree)
+                        if simplified_tree == tree_before_simplification:
+                            break
+                    simplified_trees.append(simplified_tree)
+                new_trees = sorted(set(simplified_trees), key=lambda x: x.accept(CountQueryNodeVisitor()))[
+                            :max_trees_in_queue]
+                best_new_tree = new_trees[0]
 
-            best_tree = best_new_tree
+                if best_new_tree == best_tree:
+                    attempts += 1
+                    if attempts == max_attempts:
+                        return best_tree
 
-            if len(simplified_trees) == 1:
-                break
+                best_tree = best_new_tree
+
+                if len(simplified_trees) == 1:
+                    break
+
+                progress_bar.increment()
 
         return best_tree
 
@@ -590,3 +596,19 @@ class SimplifyingQueryNodeVisitor(SimplificationRule):
         for rule in self._reordering_rules:
             node = node.accept(rule)
         return node
+
+
+class SimpleQuerySimplifier(QuerySimplifier):
+    def __init__(self):
+        self._simplifying_visitor = SimplifyingQueryNodeVisitor()
+
+    def simplify_query(self, query_node: QueryNode) -> QueryNode:
+        simplified = query_node.accept(self._simplifying_visitor)
+        return simplified
+
+
+DEFAULT_QUERY_SIMPLIFIER = SimpleQuerySimplifier()
+
+
+def default_query_simplifier():
+    return DEFAULT_QUERY_SIMPLIFIER
