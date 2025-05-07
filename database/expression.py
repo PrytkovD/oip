@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Collection
 
 from database.aliasmixin import AliasMixin
 
@@ -45,6 +45,23 @@ class Expression[T](AliasMixin, ABC):
     @classmethod
     def function[T, U](cls, func: Callable[[T], U]):
         return lambda expression: FunctionExpression(expression, func)
+
+    @classmethod
+    def contains(cls, expression, collection):
+        return ContainsExpression(expression, collection)
+
+    @classmethod
+    def case(cls, condition, then, otherwise):
+        return CaseExpression(condition, then, otherwise)
+
+    def is_none(self):
+        return IsNoneExpression(self)
+
+    def is_not_none(self):
+        return IsNotNoneExpression(self)
+
+    def is_in(self, collection):
+        return ContainsExpression(self, collection)
 
     def __add__(self, other):
         return AddExpression(self, other)
@@ -458,6 +475,62 @@ class GreaterEqualExpression(BoolExpression, BinaryExpression[bool]):
 
     def _get_name(self):
         return f'({self._left.name} >= {self._right.name})'
+
+
+class IsNoneExpression(BoolExpression, UnaryExpression[bool]):
+    def _evaluate(self, record: 'Record') -> bool:
+        return record.get(self._operand) is None
+
+    def _compile(self) -> Callable[['Record'], bool]:
+        return lambda record: record.get(self._operand) is None
+
+    def _get_name(self):
+        return f'{self._operand.name} is None'
+
+
+class IsNotNoneExpression(BoolExpression, UnaryExpression[bool]):
+    def _evaluate(self, record: 'Record') -> bool:
+        return record.get(self._operand) is not None
+
+    def _compile(self) -> Callable[['Record'], bool]:
+        return lambda record: record.get(self._operand) is not None
+
+    def _get_name(self):
+        return f'{self._operand.name} is not None'
+
+
+class ContainsExpression(BoolExpression, UnaryExpression[bool]):
+    def __init__(self, operand: Expression[Any], collection: Collection[Any]):
+        super().__init__(operand)
+        self._collection = collection
+
+    def _evaluate(self, record: 'Record') -> bool:
+        return self._operand.evaluate(record) in self._collection
+
+    def _compile(self) -> Callable[['Record'], bool]:
+        compiled_operand = self._operand.compile()
+        return lambda record: compiled_operand(record) in self._collection
+
+    def _get_name(self):
+        return f'({self._operand.name} in {self._collection})'
+
+
+class CaseExpression[T](BinaryExpression[T]):
+    def __init__(self, condition: Expression[bool], left: T | Expression[T], right: T | Expression[T]):
+        super().__init__(left, right)
+        self._condition = condition
+
+    def _evaluate(self, record: 'Record') -> T:
+        return self._left.evaluate(record) if self._condition.evaluate(record) else self._right.evaluate(record)
+
+    def _compile(self) -> Callable[['Record'], T]:
+        compiled_left = self._left.compile()
+        compiled_right = self._right.compile()
+        compiled_condition = self._condition.compile()
+        return lambda record: compiled_left(record) if compiled_condition(record) else compiled_right(record)
+
+    def _get_name(self):
+        return f'(case {self._condition.name} then {self._left.name} else {self._right.name})'
 
 
 from database.record import Record

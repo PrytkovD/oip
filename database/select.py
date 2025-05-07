@@ -13,7 +13,7 @@ class Select:
         self._predicate: Optional[Expression[bool]] = None
         self._aggregations = list[Aggregation]()
         self._group_keys = list[ColumnSelector]()
-        self._joins = list[Tuple[RecordSet, Expression, Expression]]()
+        self._joins = list[Tuple[RecordSet, Expression, Expression, Expression[bool], str]]()
         self._orderings = None
 
     def columns(self, *exprs: Expression) -> Self:
@@ -32,9 +32,55 @@ class Select:
         self._aggregations = list(aggs)
         return self
 
-    def join(self, other: RecordSet, self_key: Expression, other_key: Expression) -> Self:
-        self._joins.append((other, self_key, other_key))
+    def join(
+            self,
+            other: RecordSet,
+            self_key: Optional[Expression] = None,
+            other_key: Optional[Expression] = None,
+            on: Optional[Expression[bool]] = None,
+            join_type: str = 'inner'
+    ) -> Self:
+        self._joins.append((other, self_key, other_key, on, join_type))
         return self
+
+    def inner_join(
+            self,
+            other: RecordSet,
+            self_key: Optional[Expression] = None,
+            other_key: Optional[Expression] = None,
+            on: Optional[Expression[bool]] = None,
+    ):
+        return self.join(other, self_key, other_key, on, join_type='inner')
+
+    def left_join(
+            self,
+            other: RecordSet,
+            self_key: Optional[Expression] = None,
+            other_key: Optional[Expression] = None,
+            on: Optional[Expression[bool]] = None,
+    ):
+        return self.join(other, self_key, other_key, on, join_type='left')
+
+    def right_join(
+            self,
+            other: RecordSet,
+            self_key: Optional[Expression] = None,
+            other_key: Optional[Expression] = None,
+            on: Optional[Expression[bool]] = None,
+    ):
+        return self.join(other, self_key, other_key, on, join_type='right')
+
+    def full_join(
+            self,
+            other: RecordSet,
+            self_key: Optional[Expression] = None,
+            other_key: Optional[Expression] = None,
+            on: Optional[Expression[bool]] = None,
+    ):
+        return self.join(other, self_key, other_key, on, join_type='full')
+
+    def cross_join(self, other: RecordSet):
+        return self.join(other, None, None, join_type='cross')
 
     def order_by(self, *orderings: Expression | Tuple[Expression, bool]) -> Self:
         self._orderings = list(orderings)
@@ -43,8 +89,8 @@ class Select:
     def execute(self) -> RecordSet:
         result = self._source
 
-        for other, result_key, other_key in self._joins:
-            result = result.join(other, result_key, other_key)
+        for other, result_key, other_key, condition, join_type in self._joins:
+            result = result.join(other, result_key, other_key, condition, join_type)
 
         if self._predicate:
             result = result.where(self._predicate)

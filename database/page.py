@@ -1,7 +1,8 @@
 import csv
 import os
-from typing import Iterator, Dict, Any
+from typing import Iterator, Dict, Any, get_origin, get_args
 
+from database.column import Column
 from database.record import Record
 from database.recordset import RecordSet
 
@@ -27,10 +28,29 @@ class Page(RecordSet):
         try:
             with open(self._file_path, 'r') as file:
                 reader = csv.DictReader(file)
-                self._records_data = [row for row in reader]
+                self._records_data = [self._load_row(row) for row in reader]
                 self._count = len(self._records_data)
         except Exception:
             pass
+
+    def _load_row(self, row: dict[str, str]) -> dict[str, Any]:
+        typed_row = dict[str, Any]()
+        for expression in self.expressions:
+            if isinstance(expression, Column):
+                column_type = expression.type
+
+                if column_type == int:
+                    typed_row[expression.name] = int(row[expression.name])
+                elif column_type == float:
+                    typed_row[expression.name] = float(row[expression.name])
+                elif column_type == str:
+                    typed_row[expression.name] = row[expression.name]
+                elif get_origin(column_type) == list:
+                    typed_row[expression.name] = eval(row[expression.name])
+            else:
+                typed_row[expression.name] = row[expression.name]
+        return typed_row
+
 
     def dump(self):
         if not self._dirty:

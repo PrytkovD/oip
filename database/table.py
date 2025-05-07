@@ -46,10 +46,10 @@ class Table(RecordSet, AliasMixin):
         return self._name
 
 
-def create_table(name: str, *columns: str, page_size: int = 1000, storage_dir: str = '.', cache_size: int = 10):
+def create_table(name: str, *columns: 'Column', page_size: int = 1000, storage_dir: str = '.', cache_size: int = 10):
     return Table(
         name,
-        *[Column(column) for column in columns],
+        *columns,
         page_size=page_size,
         storage_dir=storage_dir,
         cache_size=cache_size
