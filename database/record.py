@@ -14,6 +14,13 @@ class Record(ColumnSet):
         super().__init__(expressions)
         self._data = data
 
+    def get(self, key: ColumnSelector) -> Any | None:
+        if isinstance(key, Expression | str):
+            key = key.name if isinstance(key, Expression) else key
+            return self._data.get(key)
+
+        return None
+
     def __getitem__(self, key: ColumnSelector | Iterable[ColumnSelector]) -> Self | Any:
         if isinstance(key, Expression | str):
             key = key.name if isinstance(key, Expression) else key

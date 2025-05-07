@@ -1,3 +1,4 @@
+import copy
 from abc import ABC
 from typing import Self, override
 
@@ -6,8 +7,9 @@ from database.namemixin import NameMixin
 
 class AliasMixin(NameMixin, ABC):
     def alias(self, alias: str) -> Self:
-        setattr(self, '_alias', alias)
-        return self
+        other = copy.copy(self)
+        setattr(other, '_alias', alias)
+        return other
 
     @property
     def original_name(self) -> str:

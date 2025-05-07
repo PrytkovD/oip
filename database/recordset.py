@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Iterator, Tuple, List, Any
+from typing import Iterable, Iterator, Tuple, List, Any, Optional
 
 from database.aggeration import Aggregation
 from database.columnset import ColumnSet, ColumnSelector
@@ -47,10 +47,17 @@ class RecordSet(ColumnSet, ABC):
         return GroupBy(self, list(expression if isinstance(expression, Expression) else RawExpression(expression)
                                   for expression in expressions))
 
-    def join(self, other: 'RecordSet', self_key: Expression[Any], other_key: Expression[Any]) -> 'Join':
-        return Join(self, other, self_key, other_key)
+    def join(
+            self,
+            other: 'RecordSet',
+            self_key: Optional[Expression],
+            other_key: Optional[Expression],
+            condition: Optional[Expression[bool]],
+            join_type: str = 'inner'
+    ) -> 'Join':
+        return Join(self, other, self_key, other_key, condition, join_type)
 
-    def display(self) -> None:
+    def display(self, max_records: Optional[int] = None) -> None:
         headers = [expr.name for expr in self.expressions]
         rows = []
         for record in self:
@@ -59,6 +66,8 @@ class RecordSet(ColumnSet, ABC):
                 value = record[expr.name]
                 row.append(str(value))
             rows.append(row)
+            if max_records is not None and len(rows) >= max_records:
+                break
 
         max_widths = [len(header) for header in headers]
         for row in rows:
@@ -96,13 +105,21 @@ class Projection(RecordSet):
 
     def __iter__(self) -> Iterator[Record]:
         for record in self._source:
-            data = dict[str, Any]()
-            for expression in self.expressions:
-                if isinstance(expression, Aggregation):
-                    data[expression.name] = record[expression.name]
-                else:
-                    data[expression.name] = expression.evaluate(record)
-            yield Record(data, self.expressions)
+            yield self._make_record(record)
+
+    def _make_record(self, record: Record) -> Record:
+        data = dict[str, Any]()
+        for expression in self.expressions:
+            value = None
+            if isinstance(expression, Aggregation):
+                try:
+                    value = record[expression.name]
+                except KeyError:
+                    value = record[expression.original_name]
+            else:
+                value = expression.evaluate(record)
+            data[expression.name] = value
+        return Record(data, self.expressions)
 
 
 class Filter(RecordSet):
@@ -192,17 +209,42 @@ class Join(RecordSet):
             self,
             left: RecordSet,
             right: RecordSet,
-            left_key: Expression,
-            right_key: Expression
+            left_key: Optional[Expression] = None,
+            right_key: Optional[Expression] = None,
+            condition: Optional[Expression[bool]] = None,
+            join_type: str = 'inner'
     ):
         combined_expressions = list(left.expressions) + list(right.expressions)
         super().__init__(combined_expressions)
+
         self._left = left
         self._right = right
-        self._compiled_left_key = left_key.compile()
-        self._compiled_right_key = right_key.compile()
+
+        self._compiled_left_key = left_key.compile() if left_key is not None else None
+        self._compiled_right_key = right_key.compile() if right_key is not None else None
+        self._compiled_condition = condition.compile() if condition is not None else None
+
+        self._join_type = join_type
 
     def __iter__(self) -> Iterator[Record]:
+        if self._join_type == 'cross':
+            yield from self._cross_join()
+            return
+        elif self._compiled_left_key and self._compiled_right_key:
+            yield from self._hash_join()
+            return
+        elif self._compiled_condition:
+            yield from self._conditional_join()
+            return
+        else:
+            raise NotImplementedError
+
+    def _cross_join(self):
+        for left_record in self._left:
+            for right_record in self._right:
+                yield self._make_record(left_record, right_record)
+
+    def _hash_join(self):
         hash_table = dict[Any, List[Record]]()
         for right_record in self._right:
             key = self._compiled_right_key(right_record)
@@ -210,10 +252,51 @@ class Join(RecordSet):
                 hash_table[key] = list[Record]()
             hash_table[key].append(right_record)
 
+        matched_right_ids = set[int]()
+
         for left_record in self._left:
             key = self._compiled_left_key(left_record)
             matches = hash_table.get(key, [])
-            for right_record in matches:
-                data = {expression.name: left_record[expression] for expression in self._left.expressions}
-                data.update({expression.name: right_record[expression] for expression in self._right.expressions})
-                yield Record(data, self.expressions)
+
+            if matches:
+                for right_record in matches:
+                    matched_right_ids.add(id(right_record))
+                    yield self._make_record(left_record, right_record)
+            elif self._join_type in ('left', 'full'):
+                yield self._make_record(left_record, None)
+
+        if self._join_type in ('right', 'full'):
+            for right_record in self._right:
+                if id(right_record) not in matched_right_ids:
+                    yield self._make_record(None, right_record)
+
+    def _conditional_join(self):
+        matched_right_ids = set()
+        matched_left_ids = set()
+        right_records = list(self._right)
+        left_records = list(self._left)
+
+        for left_record in left_records:
+            match_found = False
+            for right_record in right_records:
+                record = self._make_record(left_record, right_record)
+                if self._compiled_condition(record):
+                    match_found = True
+                    matched_right_ids.add(id(right_record))
+                    matched_left_ids.add(id(left_record))
+                    yield record
+            if not match_found and self._join_type in ("left", "full"):
+                yield self._make_record(left_record, None)
+
+        if self._join_type in ("right", "full"):
+            for right_record in right_records:
+                if id(right_record) not in matched_right_ids:
+                    yield self._make_record(None, right_record)
+
+    def _make_record(self, left_record: Record | None, right_record: Record | None) -> Record:
+        data: dict[str, Any] = {}
+        for expression in self._left.expressions:
+            data[expression.name] = left_record[expression] if left_record is not None else None
+        for expression in self._right.expressions:
+            data[expression.name] = right_record[expression] if right_record is not None else None
+        return Record(data, self.expressions)

@@ -10,7 +10,7 @@ from oip.impl.tf_idf.serialization import PageTfIdfsSerializer, PageTfIdfsDeseri
 from oip.impl.util.repository.file_name_transformation import PrefixSuffixFileNameTransformer
 from oip.impl.util.repository.key_extraction import LambdaKeyExtractor
 from oip.impl.util.repository.multi_file import MultiFileRepository
-from oip.impl.util.tables import PAGE_TOKENS, PAGE, PAGE_LEMMAS, LEMMAS_TOKENS
+from oip.impl.util.tables import PAGE_TOKENS, PAGE, PAGE_LEMMAS, LEMMAS_TOKENS, PAGE_TOKENS_TF_IDFS, PAGE_LEMMAS_TF_IDFS
 
 
 class PageTfIdfsKeyExtractor(LambdaKeyExtractor[PageTfIdfs]):
@@ -41,6 +41,9 @@ class PageLemmasTfIdfsMultiFileRepository(MultiFileRepository[PageTfIdfs]):
 
 
 class PageTokensTfIdfsDatabaseRepository(Repository[PageTfIdfs]):
+    def __init__(self):
+        self._computed = False
+
     def load(self, key: str) -> Optional[PageTfIdfs]:
         return NotImplemented
 
@@ -48,6 +51,41 @@ class PageTokensTfIdfsDatabaseRepository(Repository[PageTfIdfs]):
         return NotImplemented
 
     def load_all(self) -> List[PageTfIdfs]:
+        if not self._computed:
+            self._compute()
+
+        aggregation_dict = Aggregation.dict(
+            PAGE_TOKENS_TF_IDFS.token,
+            PAGE_TOKENS_TF_IDFS.idf,
+            PAGE_TOKENS_TF_IDFS.tf_idf
+        )
+        dict_query = (select_from(PAGE_TOKENS_TF_IDFS)
+                      .columns(PAGE_TOKENS_TF_IDFS.page_url, aggregation_dict)
+                      .group_by(*[expression.name for expression in PAGE_TOKENS_TF_IDFS.expressions])
+                      .aggregate(aggregation_dict).execute())
+
+        aggregation_list = Aggregation.list(aggregation_dict)
+        records = (select_from(dict_query)
+                   .group_by(PAGE_TOKENS_TF_IDFS.page_url)
+                   .aggregate(aggregation_list)
+                   .execute())
+
+        page_tf_idfs = list[PageTfIdfs]()
+        for record in records:
+            page_url = record[PAGE_TOKENS_TF_IDFS.page_url]
+            tf_idfs = [TfIdf(
+                dict['page_tokens_tf_idfs.token'],
+                dict['page_tokens_tf_idfs.idf'],
+                dict['page_tokens_tf_idfs.tf_idf'])
+                for dict in record[aggregation_list]]
+            page_tf_idfs.append(PageTfIdfs(page_url, tf_idfs))
+
+        return page_tf_idfs
+
+    def save_all(self, objs: List[PageTfIdfs]):
+        return NotImplemented
+
+    def _compute(self):
         count = 0
         for record in select_from(PAGE).aggregate(Aggregation.count()).execute():
             count = record[Aggregation.count()]
@@ -71,29 +109,16 @@ class PageTokensTfIdfsDatabaseRepository(Repository[PageTfIdfs]):
                         .columns(*PAGE_TOKENS.expressions, idf, tf_idf)
                         .execute())
 
-        aggregation_dict = Aggregation.dict(PAGE_TOKENS.token, idf, tf_idf)
-        dict_query = (select_from(tf_idf_query)
-                      .columns(PAGE_TOKENS.page_url, aggregation_dict)
-                      .group_by(*[expression.name for expression in tf_idf_query.expressions])
-                      .aggregate(aggregation_dict).execute())
+        for record in tf_idf_query:
+            data = {
+                PAGE_TOKENS_TF_IDFS.page_url: record[PAGE_TOKENS.page_url],
+                PAGE_TOKENS_TF_IDFS.token: record[PAGE_TOKENS.token],
+                PAGE_TOKENS_TF_IDFS.idf: record[idf],
+                PAGE_TOKENS_TF_IDFS.tf_idf: record[tf_idf],
+            }
+            PAGE_TOKENS_TF_IDFS.insert(data)
 
-        aggregation_list = Aggregation.list(aggregation_dict)
-        records = (select_from(dict_query)
-                   .group_by(PAGE_TOKENS.page_url)
-                   .aggregate(aggregation_list)
-                   .execute())
-
-        page_tf_idfs = list[PageTfIdfs]()
-        for record in records:
-            page_url = record[PAGE_TOKENS.page_url]
-            tf_idfs = [TfIdf(dict['page_tokens.token'], dict['idf'], dict['tf_idf'])
-                       for dict in record[aggregation_list]]
-            page_tf_idfs.append(PageTfIdfs(page_url, tf_idfs))
-
-        return page_tf_idfs
-
-    def save_all(self, objs: List[PageTfIdfs]):
-        return NotImplemented
+        self._computed = True
 
 
 DEFAULT_PAGE_TOKENS_TF_IDFS_REPOSITORY = PageTokensTfIdfsDatabaseRepository()
@@ -104,6 +129,9 @@ def default_page_tokens_tf_idfs_repository():
 
 
 class PageLemmasTfIdfsDatabaseRepository(Repository[PageTfIdfs]):
+    def __init__(self):
+        self._computed = False
+
     def load(self, key: str) -> Optional[PageTfIdfs]:
         return NotImplemented
 
@@ -111,6 +139,41 @@ class PageLemmasTfIdfsDatabaseRepository(Repository[PageTfIdfs]):
         return NotImplemented
 
     def load_all(self) -> List[PageTfIdfs]:
+        if not self._computed:
+            self._compute()
+
+        aggregation_dict = Aggregation.dict(
+            PAGE_LEMMAS_TF_IDFS.lemma,
+            PAGE_LEMMAS_TF_IDFS.idf,
+            PAGE_LEMMAS_TF_IDFS.tf_idf
+        )
+        dict_query = (select_from(PAGE_LEMMAS_TF_IDFS)
+                      .columns(PAGE_LEMMAS_TF_IDFS.page_url, aggregation_dict)
+                      .group_by(*[expression.name for expression in PAGE_LEMMAS_TF_IDFS.expressions])
+                      .aggregate(aggregation_dict).execute())
+
+        aggregation_list = Aggregation.list(aggregation_dict)
+        records = (select_from(dict_query)
+                   .group_by(PAGE_LEMMAS_TF_IDFS.page_url)
+                   .aggregate(aggregation_list)
+                   .execute())
+
+        page_tf_idfs = list[PageTfIdfs]()
+        for record in records:
+            page_url = record[PAGE_LEMMAS_TF_IDFS.page_url]
+            tf_idfs = [TfIdf(
+                dict['page_lemmas_tf_idfs.lemma'],
+                dict['page_lemmas_tf_idfs.idf'],
+                dict['page_lemmas_tf_idfs.tf_idf'])
+                for dict in record[aggregation_list]]
+            page_tf_idfs.append(PageTfIdfs(page_url, tf_idfs))
+
+        return page_tf_idfs
+
+    def save_all(self, objs: List[PageTfIdfs]):
+        return NotImplemented
+
+    def _compute(self):
         count = 0
         for record in select_from(PAGE).aggregate(Aggregation.count()).execute():
             count = record[Aggregation.count()]
@@ -147,29 +210,16 @@ class PageLemmasTfIdfsDatabaseRepository(Repository[PageTfIdfs]):
                         .columns(PAGE_LEMMAS.page_url, PAGE_LEMMAS.lemma, idf, tf_idf)
                         .execute())
 
-        aggregation_dict = Aggregation.dict(PAGE_LEMMAS.lemma, idf, tf_idf)
-        dict_query = (select_from(tf_idf_query)
-                      .columns(PAGE_LEMMAS.page_url, aggregation_dict)
-                      .group_by(*[expression.name for expression in tf_idf_query.expressions])
-                      .aggregate(aggregation_dict).execute())
+        for record in tf_idf_query:
+            data = {
+                PAGE_LEMMAS_TF_IDFS.page_url: record[PAGE_LEMMAS.page_url],
+                PAGE_LEMMAS_TF_IDFS.lemma: record[PAGE_LEMMAS.lemma],
+                PAGE_LEMMAS_TF_IDFS.idf: record[idf],
+                PAGE_LEMMAS_TF_IDFS.tf_idf: record[tf_idf],
+            }
+            PAGE_LEMMAS_TF_IDFS.insert(data)
 
-        aggregation_list = Aggregation.list(aggregation_dict)
-        records = (select_from(dict_query)
-                   .group_by(PAGE_LEMMAS.page_url)
-                   .aggregate(aggregation_list)
-                   .execute())
-
-        page_tf_idfs = list[PageTfIdfs]()
-        for record in records:
-            page_url = record[PAGE_LEMMAS.page_url]
-            tf_idfs = [TfIdf(dict['page_lemmas.lemma'], dict['idf'], dict['tf_idf'])
-                       for dict in record[aggregation_list]]
-            page_tf_idfs.append(PageTfIdfs(page_url, tf_idfs))
-
-        return page_tf_idfs
-
-    def save_all(self, objs: List[PageTfIdfs]):
-        return NotImplemented
+        self._computed = True
 
 
 DEFAULT_PAGE_LEMMAS_TF_IDFS_REPOSITORY = PageLemmasTfIdfsDatabaseRepository()
